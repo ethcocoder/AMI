@@ -19,7 +19,7 @@ class Concept {
 public:
     std::string name;
     std::map<std::string, std::string> attributes;
-    std::vector<std::string> relatedConcepts; // Links to other concepts
+    std::vector<std::string> relatedConcepts;
 
     Concept(std::string name);
     void addAttribute(std::string key, std::string value);
@@ -40,23 +40,6 @@ enum class LearningState {
     REVIEW
 };
 
-class Learner {
-private:
-    LearningState currentState;
-    AmiKnowledgeStore* ks;
-    std::vector<Concept> activeConcepts;
-
-public:
-    Learner(AmiKnowledgeStore* knowledgeStore);
-    void transition();
-    std::string getStateName() const;
-    void process();
-
-    // Specific reasoning actions
-    void identifyConcept(std::string name);
-    void analyzeRelationships();
-};
-
 /**
  * @brief Validation system for deterministic reasoning.
  */
@@ -71,7 +54,38 @@ public:
 class Algorithm {
 public:
     std::string logicDescription;
-    static void synthesizeFromConcepts(const std::vector<Concept>& concepts);
+    static Algorithm synthesizeFromConcepts(const std::vector<Concept>& concepts);
+};
+
+/**
+ * @brief Symbolic Logic processing.
+ */
+class Logic {
+public:
+    static bool evaluateSyllogism(const std::string& p1, const std::string& p2);
+};
+
+/**
+ * @brief Simulation environment to test algorithms before applying.
+ */
+class Simulator {
+public:
+    static bool runTrial(const Algorithm& algo, const std::vector<Concept>& inputs);
+};
+
+class Learner {
+private:
+    LearningState currentState;
+    AmiKnowledgeStore* ks;
+    std::vector<Concept> activeConcepts;
+
+public:
+    Learner(AmiKnowledgeStore* knowledgeStore);
+    void transition();
+    std::string getStateName() const;
+    void process();
+    void identifyConcept(std::string name);
+    void analyzeRelationships();
 };
 
 } // namespace Ami

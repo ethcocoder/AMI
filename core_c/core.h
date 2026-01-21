@@ -8,7 +8,8 @@ typedef enum {
     AMI_TYPE_INT,
     AMI_TYPE_FLOAT,
     AMI_TYPE_STRING,
-    AMI_TYPE_POINTER
+    AMI_TYPE_POINTER,
+    AMI_TYPE_NONE
 } AmiDataType;
 
 typedef struct {
@@ -41,18 +42,13 @@ typedef struct AmiKnowledgeStore AmiKnowledgeStore;
 AmiKnowledgeStore* ami_init_knowledge_store();
 void ami_add_fact(AmiKnowledgeStore* ks, const char* key, AmiValue value);
 AmiValue ami_get_fact(AmiKnowledgeStore* ks, const char* key);
+void ami_save_knowledge_store(AmiKnowledgeStore* ks, const char* filename);
+void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename);
 
 /**
  * @brief Rule Engine interface
  */
 void ami_execute_rule(AmiRule* rule, void* context);
 uint8_t ami_check_constraints(AmiRule* rule, void* context);
-
-#endif // AMI_CORE_H
-
-/**
- * @brief Rule Engine interface
- */
-void ami_execute_rule(AmiRule* rule, void* context);
 
 #endif // AMI_CORE_H

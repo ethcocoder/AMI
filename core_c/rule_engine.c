@@ -3,9 +3,22 @@
 
 void ami_execute_rule(AmiRule* rule, void* context) {
     if (rule && rule->execute) {
-        printf("Executing rule: %s (ID: %u)\n", rule->name, rule->id);
-        rule->execute(context);
+        // First check constraints
+        if (ami_check_constraints(rule, context)) {
+            printf("[Core] Executing rule: %s\n", rule->name);
+            rule->execute(context);
+        } else {
+            fprintf(stderr, "[Core] Constraint check FAILED for rule: %s\n", rule->name);
+        }
     } else {
-        fprintf(stderr, "Error: Invalid rule or missing execution logic.\n");
+        fprintf(stderr, "[Core] Error: Invalid rule or missing execution logic.\n");
     }
+}
+
+uint8_t ami_check_constraints(AmiRule* rule, void* context) {
+    if (rule && rule->validate) {
+        return rule->validate(context);
+    }
+    // If no validation function, assume it's valid (deterministic trust)
+    return 1;
 }

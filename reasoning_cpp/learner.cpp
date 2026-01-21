@@ -1,5 +1,10 @@
 #include "reasoning.h"
 #include <algorithm>
+#include <cstring>
+
+#ifdef _WIN32
+#define strdup _strdup
+#endif
 
 namespace Ami {
 
@@ -58,13 +63,23 @@ void Learner::process() {
         case LearningState::ANALYZE:
             analyzeRelationships();
             break;
-        case LearningState::SUMMARIZE:
+        case LearningState::SUMMARIZE: {
             std::cout << "[Learner] Summarizing findings into algorithmic patterns." << std::endl;
-            Algorithm::synthesizeFromConcepts(activeConcepts);
+            Algorithm algo = Algorithm::synthesizeFromConcepts(activeConcepts);
+            if (!algo.logicDescription.empty()) {
+                AmiValue algoVal = { (void*)strdup(algo.logicDescription.c_str()), AMI_TYPE_STRING };
+                ami_add_fact(ks, "last_synthesized_algo", algoVal);
+            }
             break;
-        case LearningState::APPLY:
-            std::cout << "[Learner] Applying newly synthesized logic to current context." << std::endl;
+        }
+        case LearningState::APPLY: {
+            std::cout << "[Learner] Applying newly synthesized logic in simulation." << std::endl;
+            Algorithm dummy; dummy.logicDescription = "Test";
+            if (Simulator::runTrial(dummy, activeConcepts)) {
+                std::cout << "[Learner] Simulation SUCCESS. Ready for core application." << std::endl;
+            }
             break;
+        }
         case LearningState::REVIEW:
             std::cout << "[Learner] Validating results and refining rules." << std::endl;
             break;
