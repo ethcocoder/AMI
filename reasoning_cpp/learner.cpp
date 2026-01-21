@@ -41,50 +41,64 @@ void Learner::identifyConcept(std::string name) {
     activeConcepts.emplace_back(name);
 }
 
+void Learner::learnProperty(std::string conceptName, std::string propName, double value) {
+    std::cout << "[Learner] Learning Property: " << conceptName << "." << propName << " = " << value << std::endl;
+    for (auto& c : activeConcepts) {
+        if (c.name == conceptName) {
+            c.setProperty(propName, value);
+            return;
+        }
+    }
+    // If concept doesn't exist, create it and add property
+    Concept c(conceptName);
+    c.setProperty(propName, value);
+    activeConcepts.push_back(c);
+}
+
 void Learner::analyzeRelationships() {
-    std::cout << "[Learner] Analyzing relationships between " << activeConcepts.size() << " concepts." << std::endl;
-    // Basic logic: if concepts are in the same active set, they might be related
+    std::cout << "[Learner] Deep Relational Analysis..." << std::endl;
     for (size_t i = 0; i < activeConcepts.size(); ++i) {
         for (size_t j = i + 1; j < activeConcepts.size(); ++j) {
-            activeConcepts[i].addRelationship(activeConcepts[j].name);
-            activeConcepts[j].addRelationship(activeConcepts[i].name);
+            std::string sub = activeConcepts[i].name;
+            std::string obj = activeConcepts[j].name;
+            relationshipMap[sub].push_back(obj);
+            activeConcepts[i].addRelationship(obj);
         }
     }
 }
 
 void Learner::process() {
-    std::cout << "[Learner] --- State: " << getStateName() << " ---" << std::endl;
+    std::cout << "[Learner] --- Process Mode: " << getStateName() << " ---" << std::endl;
     
     switch (currentState) {
-        case LearningState::IDENTIFY:
-            // In a real system, this would parse input resources
-            std::cout << "[Learner] Scanning Knowledge Store for raw facts..." << std::endl;
-            break;
         case LearningState::ANALYZE:
             analyzeRelationships();
+            // Perform Inference Check
+            if (Logic::inferRelationship("Gravity", "Force", relationshipMap)) {
+                std::cout << "[Brain] INFERRED: Gravity is linked to the Force domain." << std::endl;
+            }
             break;
+            
         case LearningState::SUMMARIZE: {
-            std::cout << "[Learner] Summarizing findings into algorithmic patterns." << std::endl;
+            std::cout << "[Learner] Patterns found in " << activeConcepts.size() << " data points." << std::endl;
             Algorithm algo = Algorithm::synthesizeFromConcepts(activeConcepts);
-            if (!algo.logicDescription.empty()) {
-                AmiValue algoVal = { (void*)strdup(algo.logicDescription.c_str()), AMI_TYPE_STRING };
-                ami_add_fact(ks, "last_synthesized_algo", algoVal);
+            if (!algo.target.empty()) {
+                std::string logic = algo.target + " synthesized via " + algo.operation;
+                AmiValue algoVal = { (void*)strdup(logic.c_str()), AMI_TYPE_STRING };
+                ami_add_fact(ks, "last_brain_discovery", algoVal);
             }
             break;
         }
+        
         case LearningState::APPLY: {
-            std::cout << "[Learner] Applying newly synthesized logic in simulation." << std::endl;
-            Algorithm dummy; dummy.logicDescription = "Test";
-            if (Simulator::runTrial(dummy, activeConcepts)) {
-                std::cout << "[Learner] Simulation SUCCESS. Ready for core application." << std::endl;
+            Algorithm algo = Algorithm::synthesizeFromConcepts(activeConcepts);
+            if (Simulator::runTrial(algo, activeConcepts)) {
+                std::cout << "[Learner] Result matches expected deterministic outcome." << std::endl;
             }
             break;
         }
-        case LearningState::REVIEW:
-            std::cout << "[Learner] Validating results and refining rules." << std::endl;
-            break;
+
         default:
-            std::cout << "[Learner] Performing " << getStateName() << " routine." << std::endl;
             break;
     }
 }

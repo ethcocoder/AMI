@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     AMI_TYPE_INT,
     AMI_TYPE_FLOAT,
@@ -50,5 +54,9 @@ void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename);
  */
 void ami_execute_rule(AmiRule* rule, void* context);
 uint8_t ami_check_constraints(AmiRule* rule, void* context);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AMI_CORE_H

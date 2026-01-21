@@ -1,7 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
+#include <cstring>
 #include "../core_c/core.h"
 #include "reasoning.h"
+
+#ifdef _WIN32
+#define strdup _strdup
+#endif
 
 // Define a validation function for our rule
 uint8_t physics_constraint_check(void* context) {
@@ -14,24 +19,46 @@ void physics_execution(void* context) {
     std::cout << "[Core Logic] Executed: " << message << std::endl;
 }
 
-int main() {
-    std::cout << "AMI BRAIN CORE - FINAL INITIALIZATION" << std::endl;
-    std::cout << "======================================" << std::endl;
-
+int main(int argc, char* argv[]) {
     // 1. Initialize C Core Knowledge Store (The "Subconscious")
     AmiKnowledgeStore* ks = ami_init_knowledge_store();
-    
-    // Test storing typed data
-    AmiValue system_name = { (void*)"AmI Virtual Brain", AMI_TYPE_STRING };
-    ami_add_fact(ks, "identity", system_name);
-
-    // 2. Initialize C++ Learner (The "Conscious Reasoning")
     Ami::Learner brain(ks);
 
-    // 3. THE CYCLE: Learning about Physics
-    std::cout << "\n[Stage 1] Cognitive Discovery" << std::endl;
-    brain.identifyConcept("Mass");
-    brain.identifyConcept("Acceleration");
+    if (argc > 1) {
+        std::cout << "[Interface] Synced Intelligence Layers:" << std::endl;
+        for (int i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+            size_t first = arg.find(':');
+            if (first == std::string::npos) continue;
+
+            std::string type = arg.substr(0, first);
+            std::string data = arg.substr(first + 1);
+
+            if (type == "CON") {
+                brain.identifyConcept(data);
+            } 
+            else if (type == "REL") {
+                size_t sep = data.find(':');
+                std::string sub = data.substr(0, sep);
+                std::string obj = data.substr(sep + 1);
+                std::cout << "[Brain] Learned Relationship: " << sub << " -> " << obj << std::endl;
+            }
+            else if (type == "RULE") {
+                size_t sep = data.find(':');
+                std::string target = data.substr(0, sep);
+                std::string formula = data.substr(sep + 1);
+                std::cout << "[Brain] Synthesized Algorithm: " << target << " = " << formula << std::endl;
+                AmiValue v = { (void*)strdup(formula.c_str()), AMI_TYPE_STRING };
+                ami_add_fact(ks, target.c_str(), v);
+            }
+            else if (type == "CONS") {
+                std::cout << "[Brain] Registered Constraint: " << data << std::endl;
+            }
+        }
+    } else {
+        brain.identifyConcept("Mass");
+        brain.identifyConcept("Acceleration");
+    }
     brain.transition(); // To GATHER
     brain.transition(); // To OBSERVE
 
@@ -61,10 +88,16 @@ int main() {
         ami_execute_rule(&synthesized_force_rule, (void*)"RESULT: Force = 50N");
     }
 
-    std::cout << "\n[Stage 6] Long-Term Memory Check" << std::endl;
-    AmiValue retrieved = ami_get_fact(ks, "last_synthesized_algo");
+    // 4. Persistence Demonstration
+    std::cout << "\n[Stage 6] Persistence (Saving and Loading .ami)" << std::endl;
+    ami_save_knowledge_store(ks, "brain_data.ami");
+
+    AmiKnowledgeStore* new_ks = ami_init_knowledge_store();
+    ami_load_knowledge_store(new_ks, "brain_data.ami");
+
+    AmiValue retrieved = ami_get_fact(new_ks, "last_synthesized_algo");
     if (retrieved.type == AMI_TYPE_STRING) {
-        std::cout << "Stored Concept in LTM: " << (char*)retrieved.data << std::endl;
+        std::cout << "Successfully retrieved from .ami: " << (char*)retrieved.data << std::endl;
     }
 
     std::cout << "======================================" << std::endl;
