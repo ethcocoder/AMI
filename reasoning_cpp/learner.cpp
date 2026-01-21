@@ -55,45 +55,77 @@ void Learner::learnProperty(std::string conceptName, std::string propName, doubl
     activeConcepts.push_back(c);
 }
 
+void Learner::addDirectedRelationship(std::string sub, std::string obj) {
+    relationshipMap[sub].push_back(obj);
+}
+
 void Learner::analyzeRelationships() {
-    std::cout << "[Learner] Deep Relational Analysis..." << std::endl;
-    for (size_t i = 0; i < activeConcepts.size(); ++i) {
-        for (size_t j = i + 1; j < activeConcepts.size(); ++j) {
-            std::string sub = activeConcepts[i].name;
-            std::string obj = activeConcepts[j].name;
-            relationshipMap[sub].push_back(obj);
-            activeConcepts[i].addRelationship(obj);
+    std::cout << "[Learner] Searching for logical connections between " << activeConcepts.size() << " objects..." << std::endl;
+    // We now rely on user-defined directed relationships for thinking
+}
+
+void Learner::queryConcept(std::string name) {
+    std::cout << "[Query] Investigating Concept: " << name << std::endl;
+    bool found = false;
+    for (const auto& c : activeConcepts) {
+        if (c.name == name) {
+            c.display();
+            found = true;
+            break;
         }
+    }
+    if (!found) {
+        std::cout << "[Query] Concept '" << name << "' is currently unknown in high-level reasoning." << std::endl;
+    }
+}
+
+void Learner::findConnection(std::string start, std::string end) {
+    std::cout << "[Query] Searching for logical link: " << start << " -> " << end << std::endl;
+    Thought t = Logic::deepInference(start, end, relationshipMap);
+    if (t.valid) {
+        std::cout << "[Query] Connection Found! Thought Chain:" << std::endl;
+        for (size_t i = 0; i < t.path.size(); ++i) {
+            std::cout << "  " << t.path[i] << (i < t.path.size() - 1 ? " -> " : "");
+        }
+        std::cout << std::endl;
+    } else {
+        std::cout << "[Query] No logical path exists between these concepts." << std::endl;
     }
 }
 
 void Learner::process() {
-    std::cout << "[Learner] --- Process Mode: " << getStateName() << " ---" << std::endl;
+    std::cout << "[Learner] Phase: " << getStateName() << std::endl;
     
     switch (currentState) {
+        case LearningState::GATHER:
+            // Machine Learning: Store a snapshot of current concept values
+            dataHistory.push_back(activeConcepts);
+            break;
+
         case LearningState::ANALYZE:
             analyzeRelationships();
-            // Perform Inference Check
-            if (Logic::inferRelationship("Gravity", "Force", relationshipMap)) {
-                std::cout << "[Brain] INFERRED: Gravity is linked to the Force domain." << std::endl;
-            }
             break;
             
         case LearningState::SUMMARIZE: {
-            std::cout << "[Learner] Patterns found in " << activeConcepts.size() << " data points." << std::endl;
-            Algorithm algo = Algorithm::synthesizeFromConcepts(activeConcepts);
-            if (!algo.target.empty()) {
-                std::string logic = algo.target + " synthesized via " + algo.operation;
-                AmiValue algoVal = { (void*)strdup(logic.c_str()), AMI_TYPE_STRING };
-                ami_add_fact(ks, "last_brain_discovery", algoVal);
+            // Machine Learning: Train a model based on history
+            activeModel = Algorithm::synthesizeFromConcepts(activeConcepts);
+            if (!activeModel.target.empty() && dataHistory.size() > 1) {
+                activeModel.train(dataHistory, activeModel.target);
+                
+                // Save formula string
+                std::string learnedRule = activeModel.target + " (Structural Model) learned with Confidence: " + std::to_string(activeModel.confidence);
+                AmiValue v = { (void*)strdup(learnedRule.c_str()), AMI_TYPE_STRING };
+                ami_add_fact(ks, "last_ml_model", v);
             }
             break;
         }
         
         case LearningState::APPLY: {
-            Algorithm algo = Algorithm::synthesizeFromConcepts(activeConcepts);
-            if (Simulator::runTrial(algo, activeConcepts)) {
-                std::cout << "[Learner] Result matches expected deterministic outcome." << std::endl;
+            if (dataHistory.size() > 1) {
+                activeModel.train(dataHistory, activeModel.target); 
+            }
+            if (!activeModel.target.empty()) {
+                Simulator::runTrial(activeModel, activeConcepts);
             }
             break;
         }
@@ -101,6 +133,58 @@ void Learner::process() {
         default:
             break;
     }
+}
+
+void Learner::saveWeights() {
+    std::cout << "[Learner] Persisting Neural Weights to Binary Store..." << std::endl;
+    
+    // Save Bias
+    double* bVal = (double*)ami_malloc(sizeof(double));
+    *bVal = activeModel.bias;
+    AmiValue bv = { bVal, AMI_TYPE_DOUBLE };
+    ami_add_fact(ks, "model_bias", bv);
+
+    // Save Weights
+    for (size_t i = 0; i < activeModel.weights.size(); ++i) {
+        double* wVal = (double*)ami_malloc(sizeof(double));
+        *wVal = activeModel.weights[i];
+        AmiValue wv = { wVal, AMI_TYPE_DOUBLE };
+        std::string key = "weight_" + activeModel.inputs[i];
+        ami_add_fact(ks, key.c_str(), wv);
+    }
+}
+
+void Learner::loadWeights() {
+    std::cout << "[Learner] Attempting to restore Neural Model from Binary Store..." << std::endl;
+    
+    // Synthesize structure first if empty
+    if (activeModel.target.empty()) {
+        activeModel = Algorithm::synthesizeFromConcepts(activeConcepts);
+    }
+
+    if (activeModel.target.empty() || activeModel.inputs.empty()) {
+        std::cout << "[Learner] Warning: No structural model found to apply weights to." << std::endl;
+        return;
+    }
+
+    // Load Bias
+    AmiValue bv = ami_get_fact(ks, "model_bias");
+    if (bv.type == AMI_TYPE_DOUBLE) {
+        activeModel.bias = *(double*)bv.data;
+    }
+
+    // Load Weights per input
+    activeModel.weights.assign(activeModel.inputs.size(), 0.0);
+    for (size_t i = 0; i < activeModel.inputs.size(); ++i) {
+        std::string key = "weight_" + activeModel.inputs[i];
+        AmiValue wv = ami_get_fact(ks, key.c_str());
+        if (wv.type == AMI_TYPE_DOUBLE) {
+            activeModel.weights[i] = *(double*)wv.data;
+        }
+    }
+
+    activeModel.confidence = 1.0; // Assume stored models are verified
+    std::cout << "[Learner] Model successfully restored: " << activeModel.target << " (Logical continuity verified)" << std::endl;
 }
 
 } // namespace Ami

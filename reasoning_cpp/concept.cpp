@@ -12,6 +12,11 @@ void Concept::setProperty(std::string key, double value) {
     properties[key] = value;
 }
 
+double Concept::getPropertyValue(std::string key) const {
+    if (properties.count(key)) return properties.at(key);
+    return 0.0;
+}
+
 void Concept::addRelationship(std::string targetConceptName) {
     relatedConcepts.push_back(targetConceptName);
 }

@@ -1,0 +1,31 @@
+Sun is a Star.
+Star is Gas.
+Hydrogen is Gas.
+Hydrogen value = 75.0
+Oxygen value = 23.0
+Water is a Molecule.
+Oxygen is a Molecule.
+Water = Hydrogen + Oxygen
+Force = Mass * Acceleration
+Mass value = 100
+Acceleration value = 15
+Gravity is a Force.
+Force is a Vector.
+Vector is Direction.
+Direction is Space.
+Space is infinite.
+Carbon is a Element.
+Element is Matter.
+Diamond is Carbon.
+Diamond is a Stone.
+Stone is Hard.
+Hard is a State.
+State is Matter.
+Matter is Energy.
+Energy = Mass * Constant.
+Constant value = 299792458
+Profit = Revenue - Expenses.
+Revenue value = 50000.0
+Expenses value = 30000.0
+Tax value = 0.15
+Taxable = Profit * Tax.

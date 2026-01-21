@@ -11,6 +11,7 @@ extern "C" {
 typedef enum {
     AMI_TYPE_INT,
     AMI_TYPE_FLOAT,
+    AMI_TYPE_DOUBLE,
     AMI_TYPE_STRING,
     AMI_TYPE_POINTER,
     AMI_TYPE_NONE

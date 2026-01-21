@@ -25,6 +25,7 @@ public:
     Concept(std::string name);
     void addAttribute(std::string key, std::string value);
     void setProperty(std::string key, double value);
+    double getPropertyValue(std::string key) const;
     void addRelationship(std::string targetConceptName);
     void display() const;
 };
@@ -57,10 +58,27 @@ class Algorithm {
 public:
     std::string target;
     std::vector<std::string> inputs;
-    std::string operation; // e.g., "multiply", "add"
+    
+    // Multi-Feature Machine Learning
+    std::vector<double> weights; // One weight per input feature
+    double bias;
+    double trainingError;
+    double confidence;           // Structural confidence in the learned rule
 
-    double evaluate(const std::vector<Concept>& currentConcepts) const;
+    Algorithm() : bias(0), trainingError(1.0), confidence(0.0) {}
+    double predict(const std::vector<Concept>& currentConcepts) const;
+    void train(const std::vector<std::vector<Concept>>& history, const std::string& targetName);
+    
     static Algorithm synthesizeFromConcepts(const std::vector<Concept>& concepts);
+};
+
+/**
+ * @brief Represents a logical thought process or inference path.
+ */
+struct Thought {
+    std::string conclusion;
+    std::vector<std::string> path;
+    bool valid;
 };
 
 /**
@@ -68,7 +86,7 @@ public:
  */
 class Logic {
 public:
-    static bool inferRelationship(const std::string& start, const std::string& end, const std::map<std::string, std::vector<std::string>>& relations);
+    static Thought deepInference(const std::string& start, const std::string& end, const std::map<std::string, std::vector<std::string>>& relations, std::vector<std::string> currentPath = {});
 };
 
 /**
@@ -84,7 +102,9 @@ private:
     LearningState currentState;
     AmiKnowledgeStore* ks;
     std::vector<Concept> activeConcepts;
+    std::vector<std::vector<Concept>> dataHistory; // DataSet for Machine Learning
     std::map<std::string, std::vector<std::string>> relationshipMap;
+    Algorithm activeModel; 
 
 public:
     Learner(AmiKnowledgeStore* knowledgeStore);
@@ -94,7 +114,14 @@ public:
 
     void identifyConcept(std::string name);
     void learnProperty(std::string conceptName, std::string propName, double value);
+    void addDirectedRelationship(std::string sub, std::string obj);
     void analyzeRelationships();
+
+    // Query Engine
+    void queryConcept(std::string name);
+    void findConnection(std::string start, std::string end);
+    void saveWeights();
+    void loadWeights();
 };
 
 } // namespace Ami

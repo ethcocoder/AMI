@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_FACTS 1024
+#define MAX_FACTS 1000000
 
 typedef struct Fact {
     char* key;
@@ -54,8 +54,9 @@ void ami_save_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
             size_t val_len = strlen((char*)ks->facts[i].value.data);
             fwrite(&val_len, sizeof(size_t), 1, f);
             fwrite(ks->facts[i].value.data, 1, val_len, f);
+        } else if (ks->facts[i].value.type == AMI_TYPE_DOUBLE) {
+            fwrite(ks->facts[i].value.data, sizeof(double), 1, f);
         } else {
-            // Placeholder for other types (int, float, etc)
             uint64_t dummy = 0; 
             fwrite(&dummy, sizeof(uint64_t), 1, f);
         }
@@ -92,6 +93,9 @@ void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
             val.data = ami_malloc(val_len + 1);
             fread(val.data, 1, val_len, f);
             ((char*)val.data)[val_len] = '\0';
+        } else if (type == AMI_TYPE_DOUBLE) {
+            val.data = ami_malloc(sizeof(double));
+            fread(val.data, sizeof(double), 1, f);
         } else {
             uint64_t dummy;
             fread(&dummy, sizeof(uint64_t), 1, f);
