@@ -1,0 +1,58 @@
+#ifndef AMI_CORE_H
+#define AMI_CORE_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+typedef enum {
+    AMI_TYPE_INT,
+    AMI_TYPE_FLOAT,
+    AMI_TYPE_STRING,
+    AMI_TYPE_POINTER
+} AmiDataType;
+
+typedef struct {
+    void* data;
+    AmiDataType type;
+} AmiValue;
+
+/**
+ * @brief Represents a rule in the AmI system.
+ */
+typedef struct {
+    uint32_t id;
+    const char* name;
+    void (*execute)(void* context);
+    uint8_t (*validate)(void* context); // Constraint checking
+    uint8_t priority;
+} AmiRule;
+
+/**
+ * @brief Memory management wrappers
+ */
+void* ami_malloc(size_t size);
+void ami_free(void* ptr);
+
+/**
+ * @brief Knowledge Store interface
+ */
+typedef struct AmiKnowledgeStore AmiKnowledgeStore;
+
+AmiKnowledgeStore* ami_init_knowledge_store();
+void ami_add_fact(AmiKnowledgeStore* ks, const char* key, AmiValue value);
+AmiValue ami_get_fact(AmiKnowledgeStore* ks, const char* key);
+
+/**
+ * @brief Rule Engine interface
+ */
+void ami_execute_rule(AmiRule* rule, void* context);
+uint8_t ami_check_constraints(AmiRule* rule, void* context);
+
+#endif // AMI_CORE_H
+
+/**
+ * @brief Rule Engine interface
+ */
+void ami_execute_rule(AmiRule* rule, void* context);
+
+#endif // AMI_CORE_H
