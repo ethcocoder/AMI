@@ -22,11 +22,13 @@ double Algorithm::predict(const std::vector<Concept>& currentConcepts) const {
 void Algorithm::train(const std::vector<std::vector<Concept>>& history, const std::string& targetName) {
     if (history.size() < 2 || inputs.empty()) return;
     
-    std::cout << "[Neural Core] Training structural model for: " << targetName << std::endl;
+    std::cout << "[Neural Core] Continuous Learning session for: " << targetName << std::endl;
     
-    // Initialize one weight per input
-    weights.assign(inputs.size(), 0.1); 
-    bias = 0.0;
+    // Continuous Learning: Only initialize if currently empty
+    if (weights.size() != inputs.size()) {
+        weights.assign(inputs.size(), 0.01); 
+        bias = 0.0;
+    }
     double learningRate = 0.000000001; // Scale down for large inputs
     int epochs = 10000;
 

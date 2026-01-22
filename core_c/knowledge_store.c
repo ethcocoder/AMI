@@ -107,3 +107,12 @@ void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
     fclose(f);
     printf("[Core] Knowledge Store loaded from %s\n", filename);
 }
+
+size_t ami_get_fact_count(AmiKnowledgeStore* ks) {
+    return ks->count;
+}
+
+const char* ami_get_fact_key(AmiKnowledgeStore* ks, size_t index) {
+    if (index < ks->count) return ks->facts[index].key;
+    return NULL;
+}

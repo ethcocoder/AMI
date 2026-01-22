@@ -50,6 +50,10 @@ AmiValue ami_get_fact(AmiKnowledgeStore* ks, const char* key);
 void ami_save_knowledge_store(AmiKnowledgeStore* ks, const char* filename);
 void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename);
 
+// Iteration
+size_t ami_get_fact_count(AmiKnowledgeStore* ks);
+const char* ami_get_fact_key(AmiKnowledgeStore* ks, size_t index);
+
 /**
  * @brief Rule Engine interface
  */

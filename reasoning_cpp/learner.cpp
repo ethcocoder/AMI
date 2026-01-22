@@ -37,7 +37,7 @@ std::string Learner::getStateName() const {
 }
 
 void Learner::identifyConcept(std::string name) {
-    std::cout << "[Learner] Identifying new concept: " << name << std::endl;
+    // Quietly add to concept map
     activeConcepts.emplace_back(name);
 }
 
@@ -59,23 +59,107 @@ void Learner::addDirectedRelationship(std::string sub, std::string obj) {
     relationshipMap[sub].push_back(obj);
 }
 
+void Learner::addSequence(std::string first, std::string second) {
+    sequenceMap[first][second] += 1.0; // Increment sequence weight
+}
+
+void Learner::addEvidence(std::string concept, std::string snippet) {
+    // RAG: Store the original text context for a concept
+    if (evidenceMap[concept].size() < 3) { // Store top 3 citations to save space
+        evidenceMap[concept].push_back(snippet);
+    }
+}
+
 void Learner::analyzeRelationships() {
     std::cout << "[Learner] Searching for logical connections between " << activeConcepts.size() << " objects..." << std::endl;
-    // We now rely on user-defined directed relationships for thinking
+    
+    // Core Centrality Analysis: Find the "Main Ideas"
+    std::map<std::string, int> centrality;
+    for (const auto& entry : relationshipMap) {
+        centrality[entry.first] += entry.second.size();
+        for (const auto& target : entry.second) {
+            centrality[target]++;
+        }
+    }
+
+    // Identify top pillars (Main Ideas)
+    std::vector<std::pair<std::string, int>> pillars;
+    for (auto const& [name, count] : centrality) {
+        pillars.push_back({name, count});
+    }
+    std::sort(pillars.begin(), pillars.end(), [](auto &left, auto &right) {
+        return left.second > right.second;
+    });
+
+    std::cout << "[Brain] Central Pillars identified: ";
+    for (int i = 0; i < std::min((int)pillars.size(), 5); ++i) {
+        std::cout << pillars[i].first << " ";
+        // Persist as Main Idea
+        std::string key = "main_pillar_" + std::to_string(i);
+        AmiValue v = { (void*)strdup(pillars[i].first.c_str()), AMI_TYPE_STRING };
+        ami_add_fact(ks, key.c_str(), v);
+    }
+    std::cout << std::endl;
 }
 
 void Learner::queryConcept(std::string name) {
-    std::cout << "[Query] Investigating Concept: " << name << std::endl;
+    std::cout << "[AmI] Reasoning about: " << name << "..." << std::endl;
     bool found = false;
     for (const auto& c : activeConcepts) {
         if (c.name == name) {
-            c.display();
             found = true;
+            
+            // 1. Structural Definition (LLM Style Synthesis)
+            std::cout << "Definition: " << name;
+            
+            // Look for best sequential followers to form a 'sentence'
+            std::string current = name;
+            std::vector<std::string> path;
+            for (int i = 0; i < 10; ++i) { // Limit to 10 words
+                if (sequenceMap.count(current) && !sequenceMap[current].empty()) {
+                    std::string bestNext = "";
+                    double maxW = -1.0;
+                    for (const auto& next : sequenceMap[current]) {
+                        if (next.second > maxW) {
+                            maxW = next.second;
+                            bestNext = next.first;
+                        }
+                    }
+                    if (bestNext != "" && bestNext != current) {
+                        std::cout << " " << bestNext;
+                        current = bestNext;
+                    } else break;
+                } else break;
+            }
+            std::cout << "." << std::endl;
+
+            // 2. Property Insights
+            for (const auto& p : c.properties) {
+                std::cout << "  - " << p.first << ": " << p.second << std::endl;
+            }
+            
+            // 3. Known Relations
+            if (relationshipMap.count(name)) {
+                std::cout << "  - Structural Context: This relates historically to ";
+                for (const auto& rel : relationshipMap.at(name)) {
+                    std::cout << rel << ", ";
+                }
+                std::cout << "among others." << std::endl;
+            }
+
+            // 4. RAG Evidence (Retrieval Augmented Generation)
+            if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
+                std::cout << "\n[Retrieval] Source Evidence (RAG):" << std::endl;
+                for (const auto& cite : evidenceMap[name]) {
+                    std::cout << "  > \"" << cite << "\"" << std::endl;
+                }
+            }
+            
             break;
         }
     }
     if (!found) {
-        std::cout << "[Query] Concept '" << name << "' is currently unknown in high-level reasoning." << std::endl;
+        std::cout << "[AmI] I am sorry, my current distillation of reality does not include a structural model for '" << name << "'." << std::endl;
     }
 }
 
@@ -136,15 +220,50 @@ void Learner::process() {
 }
 
 void Learner::saveWeights() {
-    std::cout << "[Learner] Persisting Neural Weights to Binary Store..." << std::endl;
+    std::cout << "[Learner] Persisting Neural Weights and Concept Map..." << std::endl;
     
-    // Save Bias
+    // 1. Save Concepts names
+    for (const auto& c : activeConcepts) {
+        std::string key = "concept_exists_" + c.name;
+        AmiValue cv = { (void*)strdup("TRUE"), AMI_TYPE_STRING };
+        ami_add_fact(ks, key.c_str(), cv);
+    }
+
+    // 2. Save Relationship Map (Structural Logic)
+    for (const auto& entry : relationshipMap) {
+        for (const auto& target : entry.second) {
+            std::string key = "rel_link_" + entry.first + ":" + target;
+            AmiValue rv = { (void*)strdup("TRUE"), AMI_TYPE_STRING };
+            ami_add_fact(ks, key.c_str(), rv);
+        }
+    }
+
+    // 3. Save Sequence Map (Conversational Flow)
+    for (const auto& entry : sequenceMap) {
+        for (const auto& next : entry.second) {
+            std::string key = "seq_weight_" + entry.first + ":" + next.first;
+            double* w = (double*)ami_malloc(sizeof(double));
+            *w = next.second;
+            ami_add_fact(ks, key.c_str(), { w, AMI_TYPE_DOUBLE });
+        }
+    }
+
+    // 4. Save Evidence (RAG Chunks)
+    for (const auto& entry : evidenceMap) {
+        for (size_t i = 0; i < entry.second.size(); ++i) {
+            std::string key = "evidence_" + entry.first + "_" + std::to_string(i);
+            AmiValue ev = { (void*)strdup(entry.second[i].c_str()), AMI_TYPE_STRING };
+            ami_add_fact(ks, key.c_str(), ev);
+        }
+    }
+
+    // 5. Save Bias
     double* bVal = (double*)ami_malloc(sizeof(double));
     *bVal = activeModel.bias;
     AmiValue bv = { bVal, AMI_TYPE_DOUBLE };
     ami_add_fact(ks, "model_bias", bv);
 
-    // Save Weights
+    // 3. Save Weights
     for (size_t i = 0; i < activeModel.weights.size(); ++i) {
         double* wVal = (double*)ami_malloc(sizeof(double));
         *wVal = activeModel.weights[i];
@@ -155,9 +274,47 @@ void Learner::saveWeights() {
 }
 
 void Learner::loadWeights() {
-    std::cout << "[Learner] Attempting to restore Neural Model from Binary Store..." << std::endl;
-    
-    // Synthesize structure first if empty
+    // 1. Restore Concept Map and Relationships quietly
+    size_t factCount = ami_get_fact_count(ks);
+    for (size_t i = 0; i < factCount; ++i) {
+        std::string key = ami_get_fact_key(ks, i);
+        if (key.find("concept_exists_") == 0) {
+            identifyConcept(key.substr(15));
+        }
+        else if (key.find("rel_link_") == 0) {
+            std::string link = key.substr(9);
+            size_t sep = link.find(':');
+            if (sep != std::string::npos) {
+                addDirectedRelationship(link.substr(0, sep), link.substr(sep + 1));
+            }
+        }
+        else if (key.find("seq_weight_") == 0) {
+            std::string link = key.substr(11);
+            size_t sep = link.find(':');
+            if (sep != std::string::npos) {
+                std::string first = link.substr(0, sep);
+                std::string second = link.substr(sep + 1);
+                AmiValue v = ami_get_fact(ks, key.c_str());
+                if (v.type == AMI_TYPE_DOUBLE) {
+                    sequenceMap[first][second] = *(double*)v.data;
+                }
+            }
+        }
+        else if (key.find("evidence_") == 0) {
+            AmiValue v = ami_get_fact(ks, key.c_str());
+            if (v.type == AMI_TYPE_STRING) {
+                // Find concept name from "evidence_Name_X"
+                std::string sub = key.substr(9);
+                size_t lastUnderscore = sub.find_last_of('_');
+                if (lastUnderscore != std::string::npos) {
+                    std::string concept = sub.substr(0, lastUnderscore);
+                    addEvidence(concept, (char*)v.data);
+                }
+            }
+        }
+    }
+
+    // 2. Synthesize structure first if empty
     if (activeModel.target.empty()) {
         activeModel = Algorithm::synthesizeFromConcepts(activeConcepts);
     }
@@ -167,13 +324,13 @@ void Learner::loadWeights() {
         return;
     }
 
-    // Load Bias
+    // 3. Load Bias
     AmiValue bv = ami_get_fact(ks, "model_bias");
     if (bv.type == AMI_TYPE_DOUBLE) {
         activeModel.bias = *(double*)bv.data;
     }
 
-    // Load Weights per input
+    // 4. Load Weights per input
     activeModel.weights.assign(activeModel.inputs.size(), 0.0);
     for (size_t i = 0; i < activeModel.inputs.size(); ++i) {
         std::string key = "weight_" + activeModel.inputs[i];
@@ -184,7 +341,7 @@ void Learner::loadWeights() {
     }
 
     activeModel.confidence = 1.0; // Assume stored models are verified
-    std::cout << "[Learner] Model successfully restored: " << activeModel.target << " (Logical continuity verified)" << std::endl;
+    std::cout << "[Learner] Restoration Complete: " << activeConcepts.size() << " concepts restored." << std::endl;
 }
 
 } // namespace Ami

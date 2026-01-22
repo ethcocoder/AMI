@@ -66,111 +66,95 @@ void processArg(Ami::Learner& brain, AmiKnowledgeStore* ks, const std::string& a
             brain.findConnection(data.substr(0, sep), data.substr(sep + 1));
         }
     }
+    else if (type == "SEQ") {
+        size_t sep = data.find(':');
+        if (sep != std::string::npos) {
+            brain.addSequence(data.substr(0, sep), data.substr(sep + 1));
+        }
+    }
+    else if (type == "EVI") {
+        size_t sep = data.find(':');
+        if (sep != std::string::npos) {
+            std::string concept = data.substr(0, sep);
+            std::string snippet = data.substr(sep + 1);
+            brain.addEvidence(concept, snippet);
+        }
+    }
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Initialize C Core Knowledge Store (The "Subconscious")
     AmiKnowledgeStore* ks = ami_init_knowledge_store();
+    
+    // Attempt to load existing knowledge
+    ami_load_knowledge_store(ks, "brain_data.ami");
+    
     Ami::Learner brain(ks);
+    brain.loadWeights();
 
-    // 1. Ingest/Process all input first
     if (argc > 1) {
-        std::string flag = argv[1];
-        if (flag == "--file" && argc > 2) {
-            std::cout << "[Core] Ingesting Intelligence Stream from: " << argv[2] << std::endl;
+        std::string mode = argv[1];
+
+        if (mode == "--train" && argc > 2) {
+            std::cout << "[Core] Training Mode Activated..." << std::endl;
             std::ifstream file(argv[2]);
+            if (!file) {
+                std::cout << "Error: Cannot open training stream: " << argv[2] << std::endl;
+                return 1;
+            }
+
             std::string line;
             while (std::getline(file, line)) {
                 processArg(brain, ks, line);
             }
-            // Process extra arguments (like QUERY or LINK)
-            for (int i = 3; i < argc; ++i) {
-                processArg(brain, ks, argv[i]);
-            }
-        } else {
-            for (int i = 1; i < argc; ++i) {
+
+            // Execute Training Cycle
+            std::cout << "[Brain] Running Brain Training Cycle..." << std::endl;
+            // Transition IDENTIFY -> GATHER
+            brain.transition(); 
+            brain.process(); // Take snapshot
+            
+            // Proceed to training
+            brain.transition(); // OBSERVE
+            brain.transition(); // ANALYZE
+            brain.process();    // Find links
+            brain.transition(); // SUMMARIZE
+            brain.process();    // Train weights
+            
+            // Save state
+            brain.saveWeights();
+            ami_save_knowledge_store(ks, "brain_data.ami");
+            std::cout << "[Brain] Knowledge Base Optimized and Saved." << std::endl;
+        } 
+        else if (mode == "--chat") {
+            // Chat mode: Process command line queries directly
+            std::cout << "[Core] Chat/Query Mode Activated." << std::endl;
+            for (int i = 2; i < argc; ++i) {
                 processArg(brain, ks, argv[i]);
             }
         }
+        else if (mode == "--summary") {
+            std::cout << "--- [AmI Brain: Main Intelligence Summary] ---" << std::endl;
+            std::cout << "The central pillars of this knowledge base are:" << std::endl;
+            for (int i = 0; i < 5; ++i) {
+                std::string key = "main_pillar_" + std::to_string(i);
+                AmiValue v = ami_get_fact(ks, key.c_str());
+                if (v.type == AMI_TYPE_STRING) {
+                    std::cout << "  [" << (i+1) << "] " << (char*)v.data << std::endl;
+                }
+            }
+        }
+        else {
+            // Support old style --file for backward compatibility
+            if (mode == "--file" && argc > 2) {
+                std::ifstream file(argv[2]);
+                std::string line;
+                while (std::getline(file, line)) processArg(brain, ks, line);
+                for (int i = 3; i < argc; ++i) processArg(brain, ks, argv[i]);
+            } else {
+                for (int i = 1; i < argc; ++i) processArg(brain, ks, argv[i]);
+            }
+        }
     }
-
-    // 2. The Thought Cycle & Structural Multi-Feature Training
-    std::cout << "\n[Brain] Initializing Structural Neural Cycle..." << std::endl;
-    
-    // Move to GATHER
-    brain.transition(); 
-
-    // DATASET: Profit = (Price * 10) + (Volume * 5) - Overhead
-    
-    // Sample 1: Price=10, Vol=100, Over=500 => Profit = 100 + 500 - 500 = 100
-    brain.learnProperty("Price", "value", 10.0);
-    brain.learnProperty("Volume", "value", 100.0);
-    brain.learnProperty("Overhead", "value", 500.0);
-    brain.learnProperty("Profit", "value", 100.0); 
-    brain.process(); // GATHER Snapshot 1
-    
-    for(int i=0; i<7; i++) brain.transition();
-
-    // Sample 2: Price=20, Vol=200, Over=1000 => Profit = 200 + 1000 - 1000 = 200
-    brain.learnProperty("Price", "value", 20.0);
-    brain.learnProperty("Volume", "value", 200.0);
-    brain.learnProperty("Overhead", "value", 1000.0);
-    brain.learnProperty("Profit", "value", 200.0);
-    brain.process(); // GATHER Snapshot 2
-    
-    for(int i=0; i<7; i++) brain.transition();
-
-    // Sample 3: Price=5, Vol=50, Over=250 => Profit = 50 + 250 - 250 = 50
-    brain.learnProperty("Price", "value", 5.0);
-    brain.learnProperty("Volume", "value", 50.0);
-    brain.learnProperty("Overhead", "value", 250.0);
-    brain.learnProperty("Profit", "value", 50.0);
-    brain.process(); // GATHER Snapshot 3
-
-    // Train the Neural Brain
-    brain.transition(); // OBSERVE
-    brain.transition(); // ANALYZE
-    brain.process();
-    brain.transition(); // SUMMARIZE
-    brain.process();    
-    
-    brain.transition(); // APPLY
-    brain.process();    
-    
-    // 3. Binary Persistence
-    brain.saveWeights();
-    ami_save_knowledge_store(ks, "brain_data.ami");
-
-    // 4. DEMO: Prediction from Memory (Zero-Data Prediction)
-    std::cout << "\n[Demo] --- Starting Fresh Session from Binary Memory ---" << std::endl;
-    
-    // Clear the current brain's state (Simulating a restart)
-    AmiKnowledgeStore* ks2 = ami_init_knowledge_store();
-    ami_load_knowledge_store(ks2, "brain_data.ami");
-    Ami::Learner brain2(ks2);
-
-    // Give it structural knowledge (it needs to know the names of things)
-    brain2.identifyConcept("Price");
-    brain2.identifyConcept("Volume");
-    brain2.identifyConcept("Overhead");
-    
-    // RESTORE: Load the weights we just saved
-    brain2.loadWeights();
-
-    // NEW PREDICTION: price=50, volume=500, overhead=100
-    brain2.learnProperty("Price", "value", 50.0);
-    brain2.learnProperty("Volume", "value", 500.0);
-    brain2.learnProperty("Overhead", "value", 100.0);
-    
-    std::cout << "[Demo] Predicting Profit for Price=50, Vol=500, Over=100 WITHOUT retraining..." << std::endl;
-    
-    // Move through states to APPLY (IDENTIFY -> GATHER -> OBSERVE -> ANALYZE -> SUMMARIZE -> APPLY)
-    for(int i=0; i<5; i++) brain2.transition();
-    brain2.process(); 
-
-    // 5. Finalization
-    std::cout << "\n==============================================" << std::endl;
-    std::cout << "AMI BRAIN STATUS: LONG-TERM MEMORY VERIFIED" << std::endl;
 
     return 0;
 }

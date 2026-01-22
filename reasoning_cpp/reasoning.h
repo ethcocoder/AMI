@@ -104,6 +104,8 @@ private:
     std::vector<Concept> activeConcepts;
     std::vector<std::vector<Concept>> dataHistory; // DataSet for Machine Learning
     std::map<std::string, std::vector<std::string>> relationshipMap;
+    std::map<std::string, std::map<std::string, double>> sequenceMap; 
+    std::map<std::string, std::vector<std::string>> evidenceMap; // Concept -> [Actual Source Snippets]
     Algorithm activeModel; 
 
 public:
@@ -115,6 +117,8 @@ public:
     void identifyConcept(std::string name);
     void learnProperty(std::string conceptName, std::string propName, double value);
     void addDirectedRelationship(std::string sub, std::string obj);
+    void addSequence(std::string first, std::string second);
+    void addEvidence(std::string concept, std::string snippet);
     void analyzeRelationships();
 
     // Query Engine

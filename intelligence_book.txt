@@ -1,0 +1,35 @@
+Sun is hot and bright.
+Gravity pulls everything towards Earth.
+Hydrogen is-a Gas.
+Stars are made of Hydrogen.
+Element has a property mass of 1.0.
+Hydrogen is an Element.
+Stars have gravity.
+Gravity produces pressure.
+Pressure creates Heat.
+Sun is a Star.
+Revenue is 50000.
+Expenses is 30000.
+Profit is Revenue - Expenses.
+Profit is taxable.
+Price is 15.0.
+Volume is 1000.
+Overhead is 5000.
+Profit is Price * Volume - Overhead.
+Planet is-a mass.
+Earth is a Planet.
+Earth has-a atmosphere.
+Atmosphere has Oxygen.
+Oxygen is-a Gas.
+Water is made of Hydrogen and Oxygen.
+Water is a Liquid.
+Liquid is a State.
+Matter is a State.
+Energy is Matter * Constant * Constant.
+Constant is 299792458.0.
+Mass of Carbon is 12.0.
+Diamond is-a Carbon.
+Carbon is-a Element.
+Stone is Hard.
+Diamond is a Stone.
+Hard is-a State.
