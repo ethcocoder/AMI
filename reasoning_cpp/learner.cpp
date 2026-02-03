@@ -341,7 +341,7 @@ void Learner::loadWeights() {
     }
 
     activeModel.confidence = 1.0; // Assume stored models are verified
-    std::cout << "[Learner] Restoration Complete: " << activeConcepts.size() << " concepts restored." << std::endl;
+    // std::cout << "[Learner] Restoration Complete: " << activeConcepts.size() << " concepts restored." << std::endl;
 }
 
 } // namespace Ami

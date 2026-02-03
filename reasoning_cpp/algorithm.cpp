@@ -83,7 +83,7 @@ Algorithm Algorithm::synthesizeFromConcepts(const std::vector<Concept>& concepts
     std::set<std::string> names;
     for (const auto& c : concepts) names.insert(c.name);
 
-    std::cout << "[Algorithm] Analyzing Conceptual synergy..." << std::endl;
+    // std::cout << "[Algorithm] Analyzing Conceptual synergy..." << std::endl;
 
     // Structural Multi-Feature Case: Business Profit Model
     if (names.count("Price") && names.count("Volume") && names.count("Overhead")) {
@@ -95,7 +95,7 @@ Algorithm Algorithm::synthesizeFromConcepts(const std::vector<Concept>& concepts
     else if (names.count("Mass") && names.count("Acceleration")) {
         algo.target = "Force";
         algo.inputs = {"Mass", "Acceleration"};
-        std::cout << "[Structural] Initialized Pattern: Force = f(Mass, Acceleration)" << std::endl;
+        // std::cout << "[Structural] Initialized Pattern: Force = f(Mass, Acceleration)" << std::endl;
     }
     
     return algo;

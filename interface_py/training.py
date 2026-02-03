@@ -17,7 +17,7 @@ def main():
     stream = Parser.batch_process_file(book_path)
     
     stream_file = "brain_stream.txt"
-    with open(stream_file, "w") as f:
+    with open(stream_file, "w", encoding="utf-8") as f:
         f.write("\n".join(stream))
 
     # 2. Run the C++ Brain in training mode

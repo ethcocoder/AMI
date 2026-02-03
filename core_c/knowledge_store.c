@@ -62,7 +62,7 @@ void ami_save_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
         }
     }
     fclose(f);
-    printf("[Core] Knowledge Store saved to %s\n", filename);
+    // printf("[Core] Knowledge Store saved to %s\n", filename);
 }
 
 void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
@@ -105,7 +105,7 @@ void ami_load_knowledge_store(AmiKnowledgeStore* ks, const char* filename) {
         free(key); // ami_add_fact uses strdup
     }
     fclose(f);
-    printf("[Core] Knowledge Store loaded from %s\n", filename);
+    // printf("[Core] Knowledge Store loaded from %s\n", filename);
 }
 
 size_t ami_get_fact_count(AmiKnowledgeStore* ks) {

@@ -126,8 +126,7 @@ int main(int argc, char* argv[]) {
             std::cout << "[Brain] Knowledge Base Optimized and Saved." << std::endl;
         } 
         else if (mode == "--chat") {
-            // Chat mode: Process command line queries directly
-            std::cout << "[Core] Chat/Query Mode Activated." << std::endl;
+            // Chat mode: Quietly process queries
             for (int i = 2; i < argc; ++i) {
                 processArg(brain, ks, argv[i]);
             }
