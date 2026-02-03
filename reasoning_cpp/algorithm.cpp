@@ -97,6 +97,11 @@ Algorithm Algorithm::synthesizeFromConcepts(const std::vector<Concept>& concepts
         algo.inputs = {"Mass", "Acceleration"};
         // std::cout << "[Structural] Initialized Pattern: Force = f(Mass, Acceleration)" << std::endl;
     }
+    else if (names.count("Mass") && names.count("Energy")) {
+        algo.target = "Energy";
+        algo.inputs = {"Mass"};
+        std::cout << "[Structural] Initialized Relativistic Model: Energy = f(Mass)" << std::endl;
+    }
     
     return algo;
 }

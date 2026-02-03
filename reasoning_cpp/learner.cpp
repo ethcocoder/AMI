@@ -1,6 +1,7 @@
 #include "reasoning.h"
 #include <algorithm>
 #include <cstring>
+#include <set>
 
 #ifdef _WIN32
 #define strdup _strdup
@@ -82,9 +83,14 @@ void Learner::analyzeRelationships() {
         }
     }
 
-    // Identify top pillars (Main Ideas)
+    // Identify top pillars (Main Ideas) - FILTER OUT COMMON WORDS
+    std::set<std::string> stopWords = {"The", "And", "Was", "For", "With", "That", "This", "From", "Into", "Been", "They", "Were", "Their", "Will", "Would", "Which", "Could", "There", "These", "Those", "Section", "Chapter", "Very", "More", "Often", "Always", "About", "Also", "Then", "Thus", "Both", "Some", "Each", "Every", "Another", "Same", "Able", "Been"};
+    
     std::vector<std::pair<std::string, int>> pillars;
     for (auto const& [name, count] : centrality) {
+        // Allow shorter technical terms (2+ chars) or all-caps short terms
+        bool isShortTechnical = (name.length() >= 2 && name.length() < 4 && isupper(name[0]));
+        if (stopWords.count(name) || (name.length() < 4 && !isShortTechnical)) continue;
         pillars.push_back({name, count});
     }
     std::sort(pillars.begin(), pillars.end(), [](auto &left, auto &right) {
@@ -105,61 +111,154 @@ void Learner::analyzeRelationships() {
 void Learner::queryConcept(std::string name) {
     std::cout << "[AmI] Reasoning about: " << name << "..." << std::endl;
     bool found = false;
+    const Concept* targetConcept = nullptr;
+    
     for (const auto& c : activeConcepts) {
         if (c.name == name) {
+            targetConcept = &c;
             found = true;
-            
-            // 1. Structural Definition (LLM Style Synthesis)
-            std::cout << "Definition: " << name;
-            
-            // Look for best sequential followers to form a 'sentence'
-            std::string current = name;
-            std::vector<std::string> path;
-            for (int i = 0; i < 10; ++i) { // Limit to 10 words
-                if (sequenceMap.count(current) && !sequenceMap[current].empty()) {
-                    std::string bestNext = "";
-                    double maxW = -1.0;
-                    for (const auto& next : sequenceMap[current]) {
-                        if (next.second > maxW) {
-                            maxW = next.second;
-                            bestNext = next.first;
-                        }
-                    }
-                    if (bestNext != "" && bestNext != current) {
-                        std::cout << " " << bestNext;
-                        current = bestNext;
-                    } else break;
-                } else break;
-            }
-            std::cout << "." << std::endl;
-
-            // 2. Property Insights
-            for (const auto& p : c.properties) {
-                std::cout << "  - " << p.first << ": " << p.second << std::endl;
-            }
-            
-            // 3. Known Relations
-            if (relationshipMap.count(name)) {
-                std::cout << "  - Structural Context: This relates historically to ";
-                for (const auto& rel : relationshipMap.at(name)) {
-                    std::cout << rel << ", ";
-                }
-                std::cout << "among others." << std::endl;
-            }
-
-            // 4. RAG Evidence (Retrieval Augmented Generation)
-            if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
-                std::cout << "\n[Retrieval] Source Evidence (RAG):" << std::endl;
-                for (const auto& cite : evidenceMap[name]) {
-                    std::cout << "  > \"" << cite << "\"" << std::endl;
-                }
-            }
-            
             break;
         }
     }
-    if (!found) {
-        std::cout << "[AmI] I am sorry, my current distillation of reality does not include a structural model for '" << name << "'." << std::endl;
+
+    if (found) {
+        // 1. Structural Synthesis (Sentence generation)
+        std::cout << "Definition: " << name;
+        std::string current = name;
+        std::set<std::string> usedWords;
+        int wordCount = 0;
+        
+        // Strategy: First try the exact concept casing, then try lower case
+        std::vector<std::string> searchStart = {name, (char)tolower(name[0]) + name.substr(1)};
+
+        for (int i = 0; i < 20; ++i) { 
+            usedWords.insert(current);
+            std::string bestNext = "";
+            double maxW = -1.0;
+            
+            // Try current as is, or lowercase if it was a mid-sentence word
+            std::string lookup = current;
+            if (!sequenceMap.count(lookup) && isupper(lookup[0])) {
+                lookup[0] = tolower(lookup[0]);
+            }
+
+            if (sequenceMap.count(lookup) && !sequenceMap[lookup].empty()) {
+                for (const auto& next : sequenceMap[lookup]) {
+                    if (next.second > maxW && !usedWords.count(next.first)) {
+                        maxW = next.second;
+                        bestNext = next.first;
+                    }
+                }
+            }
+            
+            if (bestNext != "") {
+                std::cout << " " << bestNext;
+                current = bestNext;
+                wordCount++;
+                if (bestNext.back() == '.' || bestNext.back() == ';' || bestNext.back() == '!') break;
+            } else break;
+        }
+        
+        if (wordCount < 5) {
+             // BRAIN SYNTHESIS: If Markov chain is poor, synthesize from RAG evidence
+             if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
+                 std::string bestEvidence = "";
+                 for (const auto& snippet : evidenceMap[name]) {
+                     // Look for defining verbs
+                     if (snippet.find(" is ") != std::string::npos || 
+                         snippet.find(" represents ") != std::string::npos ||
+                         snippet.find(" means ") != std::string::npos ||
+                         snippet.find(" defined ") != std::string::npos) {
+                         bestEvidence = snippet;
+                         break;
+                     }
+                 }
+                 if (bestEvidence.empty()) bestEvidence = evidenceMap[name][0];
+                 
+                 size_t dot = bestEvidence.find('.');
+                 std::string fragment = (dot != std::string::npos ? bestEvidence.substr(0, dot) : bestEvidence);
+                 
+                 // If the fragment contains the name, try to extract the predicate
+                 size_t namePos = fragment.find(name);
+                 if (namePos != std::string::npos) {
+                     std::string predicate = fragment.substr(namePos + name.length());
+                     // Clean up leading punctuation/spaces
+                     size_t firstChar = predicate.find_first_not_of(" \"',;:—");
+                     if (firstChar != std::string::npos) {
+                         std::cout << " " << (predicate[firstChar-1] == ' ' ? "" : " ") << predicate.substr(firstChar);
+                     } else {
+                         std::cout << " " << predicate;
+                     }
+                 } else {
+                     std::cout << " (context: " << fragment << ")";
+                 }
+             }
+        }
+        std::cout << "." << std::endl;
+
+        // 2. Structural Interaction (Multi-Hop Context)
+        if (relationshipMap.count(name)) {
+            std::cout << "  - Relational Context: " << name << " is fundamentally linked to ";
+            const auto& rels = relationshipMap.at(name);
+            for (size_t i = 0; i < std::min((size_t)5, rels.size()); ++i) {
+                std::cout << rels[i] << (i < std::min((size_t)5, rels.size()) - 1 ? ", " : "");
+            }
+            std::cout << "." << std::endl;
+            
+            // Secondary Hop: Explain WHY it's linked
+            if (!rels.empty()) {
+                std::string neighbor = rels[0];
+                if (evidenceMap.count(neighbor) && !evidenceMap[neighbor].empty()) {
+                    std::cout << "    (Cross-Referencing " << neighbor << ": " << evidenceMap[neighbor][0] << ")" << std::endl;
+                }
+            }
+        }
+
+        // 3. Computed Intelligence (Neural Algorithm Integration)
+        if (activeModel.target == name) {
+            std::cout << "  - Computational Model: Active Simulation running..." << std::endl;
+            double result = activeModel.predict(activeConcepts);
+            std::cout << "    > Estimated Current State of " << name << ": " << result << " (Confidence: " << activeModel.confidence << ")" << std::endl;
+        }
+
+        // 4. Advanced RAG Retrieval
+        if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
+            std::cout << "\n[Retrieval] Source Evidence (Direct):" << std::endl;
+            for (const auto& cite : evidenceMap[name]) {
+                std::cout << "  &> \"" << cite << "\"" << std::endl;
+            }
+        } else {
+            // Global Fallback: Search all evidence for the string
+            std::cout << "\n[Retrieval] No direct evidence. Performing Global Trace..." << std::endl;
+            int foundCount = 0;
+            for (const auto& entry : evidenceMap) {
+                for (const auto& line : entry.second) {
+                    if (line.find(name) != std::string::npos || line.find(name.substr(0, name.length()-1)) != std::string::npos) {
+                        std::cout << "  ? (Inferred from " << entry.first << "): \"" << line << "\"" << std::endl;
+                        if (++foundCount > 2) break;
+                    }
+                }
+                if (foundCount > 2) break;
+            }
+        }
+    } else {
+        // Semantic Search Fallback for Unknown Concepts
+        std::cout << "[AmI] Direct concept '" << name << "' is missing from the structural map." << std::endl;
+        std::cout << "[AmI] Initializing Latent Search Across All Ingested Knowledge..." << std::endl;
+        int searchCount = 0;
+        for (const auto& entry : evidenceMap) {
+            for (const auto& line : entry.second) {
+                if (line.find(name) != std::string::npos) {
+                    std::cout << "  > Found in context of " << entry.first << ": \"" << line << "\"" << std::endl;
+                    searchCount++;
+                }
+                if (searchCount > 3) break;
+            }
+            if (searchCount > 3) break;
+        }
+        if (searchCount == 0) {
+            std::cout << "[AmI] No latent traces found. I require further training on this subject." << std::endl;
+        }
     }
 }
 
