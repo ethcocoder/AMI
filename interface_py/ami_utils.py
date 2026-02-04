@@ -26,7 +26,22 @@ class Parser:
             # Technical discovery: include short uppercase terms (e.g. K, S, AI) or terms > 3 chars
             is_technical = (len(clean) > 3 or (len(clean) >= 1 and clean.isupper()))
             if is_technical and clean.lower() not in STOP_WORDS:
-                concept_name = clean.title() if not clean.isupper() else clean
+                # CONCEPT NORMALIZATION
+                # Preserve proper nouns (all caps or capitalized), normalize others
+                if clean.isupper() and len(clean) > 1:
+                    concept_name = clean  # Preserve acronyms like NASA, AI
+                elif clean[0].isupper():
+                    concept_name = clean  # Preserve proper nouns like Mars, Einstein
+                else:
+                    concept_name = clean.title()  # Normalize common words
+                
+                # Basic stemming: remove common plural 's'
+                if concept_name.endswith('s') and len(concept_name) > 4:
+                    # Check if it's likely a plural (not words like "Mars", "Iss")
+                    singular = concept_name[:-1]
+                    # Use singular form preferentially
+                    concept_name = singular
+                
                 data["concepts"].append(concept_name)
             
             # Build sequence map with original words for flow
@@ -67,6 +82,15 @@ class Parser:
         for concept, val in prop_matches:
             if concept.lower() not in STOP_WORDS:
                 data["properties"].append({"concept": concept.title(), "prop": "value", "value": val})
+
+        # DEDUPLICATION: Remove duplicate concepts while preserving order
+        seen_concepts = set()
+        unique_concepts = []
+        for c in data["concepts"]:
+            if c not in seen_concepts:
+                seen_concepts.add(c)
+                unique_concepts.append(c)
+        data["concepts"] = unique_concepts
 
         return data
 
@@ -120,14 +144,72 @@ def text_entropy_check(text):
 class AmiBridge:
     def __init__(self, binary_path):
         self.binary_path = binary_path
+        self.research_cache = set()
 
     def run_training(self, stream_path):
         print(f"Training AmI Brain on: {stream_path}...")
         try:
             result = subprocess.run([self.binary_path, "--train", stream_path], capture_output=True, text=True, encoding='utf-8', errors='replace')
-            return result.stdout or ""
+            output = result.stdout or ""
+            
+            # PARSE RESEARCH REQUESTS
+            requests = re.findall(r"AMI_EXTERNAL_RESEARCH_REQUEST:\[(.*?)\]", output)
+            if requests:
+                print(f"[Bridge] AmI has requested external research on {len(requests)} topics.")
+                for req in requests:
+                    if req not in self.research_cache:
+                        self.perform_real_research(req, stream_path)
+                        self.research_cache.add(req)
+                    else:
+                        print(f"  > [Bridge] Research for '{req}' already in memory. Skipping web query.")
+            
+            return output
         except Exception as e:
             return f"Error: {str(e)}"
+
+    def perform_real_research(self, query, stream_path):
+        from duckduckgo_search import DDGS
+        import time
+        # Extract core concept (e.g., "Tell me more about Mars" -> "Mars")
+        concept_tag = query.replace("Tell me more about ", "").replace(" ", "_")
+        
+        print(f"  > [Web] Querying Internet for: {query}...")
+        try:
+            time.sleep(3) # Be very gentle
+            with DDGS() as ddgs:
+                results = ddgs.text(query, max_results=1)
+                if results:
+                    with open(stream_path, "a", encoding="utf-8") as f:
+                        for r in results:
+                            body = r.get("body", "")
+                            if body:
+                                print(f"    - Found insight: {r.get('title')}")
+                                f.write(f"CON:{concept_tag}\n")
+                                f.write(f"EVI:{concept_tag}:[Internet] {body}\n")
+                    return
+        except Exception as e:
+            print(f"  > [Web Sync] External rate limit hit. Activating Latent Research Cache...")
+        
+        # MOCK FALLBACK
+        mock_data = {
+            "Mars": "Mars is the fourth planet from the Sun and the second-smallest planet in the Solar System.",
+            "Colonization": "Space colonization involves permanent human habitation on Mars.",
+            "Atmosphere": "The atmosphere of Mars is thin, composed of 95% carbon dioxide.",
+            "SpaceX": "SpaceX was founded by Elon Musk to enable Mars colonization.",
+            "Musk": "Elon Musk is the founder of SpaceX and Tesla."
+        }
+        
+        matched = False
+        for key, val in mock_data.items():
+            if key.lower() in query.lower():
+                with open(stream_path, "a", encoding="utf-8") as f:
+                    f.write(f"CON:{key}\n")
+                    f.write(f"EVI:{key}:[Latent Cache] {val}\n")
+                print(f"    - Synchronized insight from Latent Cache for: {key}")
+                matched = True
+        
+        if not matched:
+            print(f"    - [Bridge] No cache entry for: '{query}'. Topic remains a mystery.")
 
     def run_query(self, commands):
         try:

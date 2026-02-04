@@ -107,29 +107,42 @@ int main(int argc, char* argv[]) {
                 processArg(brain, ks, line);
             }
 
-            // Execute Training Cycle
-            std::cout << "[Brain] Running Brain Training Cycle..." << std::endl;
-            // Transition IDENTIFY -> GATHER
-            brain.transition(); 
-            brain.process(); // Take snapshot
-            
-            // Proceed to training
-            brain.transition(); // OBSERVE
-            brain.transition(); // ANALYZE
-            brain.process();    // Find links
-            brain.transition(); // SUMMARIZE
-            brain.process();    // Train weights
+            // Execute Autonomous Training Cycle
+            std::cout << "[Brain] Starting Autonomous Cognitive Session..." << std::endl;
+            for (int i = 0; i < 50; ++i) {
+                std::cout << "\n--- [Cognitive Pulse " << (i+1) << "] ---" << std::endl;
+                brain.autonomousTick();
+            }
             
             // Save state
             brain.saveWeights();
             ami_save_knowledge_store(ks, "brain_data.ami");
-            std::cout << "[Brain] Knowledge Base Optimized and Saved." << std::endl;
+            std::cout << "[Brain] Session Complete. Knowledge Base Optimized and Saved." << std::endl;
+
+            auto questions = brain.getResearchQuestions();
+            if (!questions.empty()) {
+                std::cout << "\n[Active Learning] The AI has formulated the following research paths:" << std::endl;
+                for (const auto& q : questions) {
+                    std::cout << "  > " << q << std::endl;
+                }
+            }
         } 
         else if (mode == "--chat") {
             // Chat mode: Quietly process queries
             for (int i = 2; i < argc; ++i) {
-                processArg(brain, ks, argv[i]);
+                std::string input = argv[i];
+                brain.handleUserInteraction(input);
+                
+                // If the input doesn't have a prefix, treat it as a potential concept query
+                if (input.find(':') == std::string::npos) {
+                    processArg(brain, ks, "QUERY:" + input);
+                } else {
+                    processArg(brain, ks, input);
+                }
             }
+            // Save state after chat to persist personalization
+            brain.saveWeights();
+            ami_save_knowledge_store(ks, "brain_data.ami");
         }
         else if (mode == "--summary") {
             std::cout << "--- [AmI Brain: Main Intelligence Summary] ---" << std::endl;
@@ -141,6 +154,16 @@ int main(int argc, char* argv[]) {
                     std::cout << "  [" << (i+1) << "] " << (char*)v.data << std::endl;
                 }
             }
+
+            auto questions = brain.getResearchQuestions();
+            if (!questions.empty()) {
+                std::cout << "\n[AI Research Focus] Current Inquiry Paths:" << std::endl;
+                for (const auto& q : questions) {
+                    std::cout << "  - " << q << std::endl;
+                }
+            }
+            
+            std::cout << "\n--- [End of Summary] ---" << std::endl;
         }
         else {
             // Support old style --file for backward compatibility

@@ -3,37 +3,61 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_FACTS 1000000
+#define MAX_FACTS 2000000
+#define HASH_SIZE 1000003 // Large prime for hash table
 
 typedef struct Fact {
     char* key;
     AmiValue value;
+    struct Fact* next; // For collision chaining
 } Fact;
 
 struct AmiKnowledgeStore {
-    Fact facts[MAX_FACTS];
+    Fact* table[HASH_SIZE]; // Hash index
+    Fact facts[MAX_FACTS];  // Linear storage for iteration
     size_t count;
 };
+
+// Simple DJB2 Hash Algorithm
+static unsigned long hash_key(const char* str) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c;
+    return hash % HASH_SIZE;
+}
 
 AmiKnowledgeStore* ami_init_knowledge_store() {
     AmiKnowledgeStore* ks = (AmiKnowledgeStore*)ami_malloc(sizeof(AmiKnowledgeStore));
     ks->count = 0;
+    for (int i = 0; i < HASH_SIZE; i++) ks->table[i] = NULL;
     return ks;
 }
 
 void ami_add_fact(AmiKnowledgeStore* ks, const char* key, AmiValue value) {
     if (ks->count < MAX_FACTS) {
+        // Linear Store
         ks->facts[ks->count].key = strdup(key);
         ks->facts[ks->count].value = value;
+        
+        // Hash Table Store (O(1))
+        unsigned long idx = hash_key(key);
+        Fact* new_f = &ks->facts[ks->count];
+        new_f->next = ks->table[idx];
+        ks->table[idx] = new_f;
+        
         ks->count++;
     }
 }
 
 AmiValue ami_get_fact(AmiKnowledgeStore* ks, const char* key) {
-    for (size_t i = 0; i < ks->count; i++) {
-        if (strcmp(ks->facts[i].key, key) == 0) {
-            return ks->facts[i].value;
+    unsigned long idx = hash_key(key);
+    Fact* curr = ks->table[idx];
+    while (curr) {
+        if (strcmp(curr->key, key) == 0) {
+            return curr->value;
         }
+        curr = curr->next;
     }
     AmiValue none = { .data = NULL, .type = AMI_TYPE_NONE };
     return none;
@@ -116,3 +140,23 @@ const char* ami_get_fact_key(AmiKnowledgeStore* ks, size_t index) {
     if (index < ks->count) return ks->facts[index].key;
     return NULL;
 }
+
+AmiValue ami_get_fact_value(AmiKnowledgeStore* ks, size_t index) {
+    if (index < ks->count) return ks->facts[index].value;
+    AmiValue none = { .data = NULL, .type = AMI_TYPE_NONE };
+    return none;
+}
+
+
+void ami_clear_knowledge_store(AmiKnowledgeStore* ks) {
+    if (!ks) return;
+    for (size_t i = 0; i < ks->count; i++) {
+        free(ks->facts[i].key);
+        if (ks->facts[i].value.data) {
+            free(ks->facts[i].value.data);
+        }
+    }
+    ks->count = 0;
+    for (int i = 0; i < HASH_SIZE; i++) ks->table[i] = NULL;
+}
+

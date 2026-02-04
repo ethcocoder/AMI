@@ -2,7 +2,7 @@
 
 namespace Ami {
 
-Concept::Concept(std::string name) : name(name) {}
+Concept::Concept(std::string name) : name(name), salience(0.0), valence(0.0) {}
 
 void Concept::addAttribute(std::string key, std::string value) {
     attributes[key] = value;

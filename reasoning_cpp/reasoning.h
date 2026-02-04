@@ -21,6 +21,10 @@ public:
     std::map<std::string, std::string> attributes;
     std::map<std::string, double> properties; // Numerical state
     std::vector<std::string> relatedConcepts;
+    
+    // Emotional Intelligence Layer
+    double salience; // Importance / Frequency of attention
+    double valence;  // Emotional Charge (-1.0 to 1.0)
 
     Concept(std::string name);
     void addAttribute(std::string key, std::string value);
@@ -40,7 +44,8 @@ enum class LearningState {
     ANALYZE,
     SUMMARIZE, // Algorithmic Synthesis
     APPLY,     // Simulation
-    REVIEW     // Validation & Persistence
+    REVIEW,    // Validation & Persistence
+    DREAM      // Synthetic Simulation / Generative Thought
 };
 
 /**
@@ -59,13 +64,16 @@ public:
     std::string target;
     std::vector<std::string> inputs;
     
-    // Multi-Feature Machine Learning
-    std::vector<double> weights; // One weight per input feature
-    double bias;
-    double trainingError;
-    double confidence;           // Structural confidence in the learned rule
+    // Deep Learning Core: 2-Layer Neural Network (Input -> Hidden -> Output)
+    std::vector<std::vector<double>> hiddenWeights; // [HiddenNode][InputNode]
+    std::vector<double> hiddenBias;
+    std::vector<double> outputWeights; // One weight per hidden node
+    double outputBias;
 
-    Algorithm() : bias(0), trainingError(1.0), confidence(0.0) {}
+    double trainingError;
+    double confidence;
+
+    Algorithm() : outputBias(0), trainingError(1.0), confidence(0.0) {}
     double predict(const std::vector<Concept>& currentConcepts) const;
     void train(const std::vector<std::vector<Concept>>& history, const std::string& targetName);
     
@@ -106,11 +114,23 @@ private:
     std::map<std::string, std::vector<std::string>> relationshipMap;
     std::map<std::string, std::map<std::string, double>> sequenceMap; 
     std::map<std::string, std::vector<std::string>> evidenceMap; // Concept -> [Actual Source Snippets]
+    
+    // System-wide Emotional State (Moods)
+    std::map<std::string, double> globalMood; // "curiosity", "anxiety", "focus"
+    std::string currentGoal;
+    
     Algorithm activeModel; 
+    std::vector<std::string> researchQuestions;
+    std::vector<std::string> cachedPillars;
+    
+    // User Personalization Layer
+    double userRapport; // 0.0 to 1.0
+    std::map<std::string, double> userPreferences; // Topic -> Interest level
 
 public:
     Learner(AmiKnowledgeStore* knowledgeStore);
     void transition();
+    void autonomousTick(); // Main Cognitive Loop
     std::string getStateName() const;
     void process();
 
@@ -120,6 +140,13 @@ public:
     void addSequence(std::string first, std::string second);
     void addEvidence(std::string concept, std::string snippet);
     void analyzeRelationships();
+    void discoverHiddenLinks(); 
+    void pruneMemories(); // Self-Correction / Forgetting Layer
+    void dream();         // Synthetic Generative Thought
+    void formulateQuestions(); // Active Learning / Inquiry
+    void performResearch();    // Autonomous External Research
+    void handleUserInteraction(std::string input); // Personalization logic
+    std::vector<std::string> getResearchQuestions() const { return researchQuestions; }
 
     // Query Engine
     void queryConcept(std::string name);
