@@ -1,0 +1,114 @@
+CON:Objective
+EVI:Objective:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+CON:Research
+EVI:Research:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+CON:Synthesize
+EVI:Synthesize:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+CON:Knowledge
+EVI:Knowledge:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+CON:Mars
+EVI:Mars:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+CON:Colonization
+EVI:Colonization:[research_seed.txt] Objective: Research and synthesize knowledge about: Mars Colonization.
+SEQ:Objective::Research
+SEQ:Objective:Research
+SEQ:objective:Research
+SEQ:Research:and
+SEQ:research:and
+SEQ:and:synthesize
+SEQ:synthesize:knowledge
+SEQ:knowledge:about:
+SEQ:about::Mars
+SEQ:about:Mars
+SEQ:Mars:Colonization.
+SEQ:mars:Colonization.
+REL:Research:Synthesize
+CON:Context
+EVI:Context:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Specifically
+EVI:Specifically:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Investigate
+EVI:Investigate:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Atmosphere
+EVI:Atmosphere:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Planet
+EVI:Planet:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Strategic
+EVI:Strategic:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Role
+EVI:Role:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Elon
+EVI:Elon:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Musk
+EVI:Musk:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+CON:Spacex
+EVI:Spacex:[research_seed.txt] Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+SEQ:Context::Specifically
+SEQ:Context:Specifically
+SEQ:context:Specifically
+SEQ:Specifically:investigate
+SEQ:specifically:investigate
+SEQ:investigate:the
+SEQ:the:Atmosphere
+SEQ:Atmosphere:of
+SEQ:atmosphere:of
+SEQ:of:the
+SEQ:the:red
+SEQ:red:planet
+SEQ:planet:and
+SEQ:and:the
+SEQ:the:strategic
+SEQ:strategic:role
+SEQ:role:of
+SEQ:of:Elon
+SEQ:Elon:Musk
+SEQ:elon:Musk
+SEQ:Musk:and
+SEQ:musk:and
+SEQ:and:SpaceX.
+REL:Role:Elon
+REL:Musk:Spacex
+CON:Goal
+EVI:Goal:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Provide
+EVI:Provide:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Comprehensive
+EVI:Comprehensive:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Technical
+EVI:Technical:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Historical
+EVI:Historical:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Summary
+EVI:Summary:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Mars
+EVI:Mars:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+CON:Colonization
+EVI:Colonization:[research_seed.txt] Goal: Provide a comprehensive technical and historical summary of Mars Colonization.
+SEQ:Goal::Provide
+SEQ:Goal:Provide
+SEQ:goal:Provide
+SEQ:Provide:a
+SEQ:provide:a
+SEQ:a:comprehensive
+SEQ:comprehensive:technical
+SEQ:technical:and
+SEQ:and:historical
+SEQ:historical:summary
+SEQ:summary:of
+SEQ:of:Mars
+SEQ:Mars:Colonization.
+SEQ:mars:Colonization.
+REL:Technical:Historical
+REL:Summary:Mars
+CON:Colonization
+EVI:Colonization:[Latent Cache] Space colonization involves permanent human habitation on Mars.
+CON:Mars
+EVI:Mars:[Latent Cache] Mars is the fourth planet from the Sun and the second-smallest planet in the Solar System.
+CON:SpaceX
+EVI:SpaceX:[Latent Cache] SpaceX was founded by Elon Musk to enable Mars colonization.
+CON:Musk
+EVI:Musk:[Latent Cache] Elon Musk is the founder of SpaceX and Tesla.
+CON:Atmosphere
+EVI:Atmosphere:[Latent Cache] The atmosphere of Mars is thin, composed of 95% carbon dioxide.
+CON:SpaceX
+EVI:SpaceX:[Latent Cache] SpaceX was founded by Elon Musk to enable Mars colonization.

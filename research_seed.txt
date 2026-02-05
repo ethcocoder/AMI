@@ -1,0 +1,3 @@
+Objective: Research and synthesize knowledge about: Mars Colonization.
+Context: Specifically investigate the Atmosphere of the red planet and the strategic role of Elon Musk and SpaceX.
+Goal: Provide a comprehensive technical and historical summary of Mars Colonization.

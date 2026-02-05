@@ -102,10 +102,16 @@ void Learner::identifyConcept(std::string name) {
     
     if (name.empty()) return;
     
-    // Check for existing concept (case-sensitive to preserve proper nouns)
+    // Check for existing concept (fuzzy/stemming match)
+    std::string stem = name;
+    if (stem.length() > 4) {
+        if (stem.back() == 's') stem.pop_back(); // Simple plural removal
+        else if (stem.length() > 6 && stem.substr(stem.length()-3) == "ing") stem = stem.substr(0, stem.length()-3);
+    }
+
     for (auto& c : activeConcepts) {
-        if (c.name == name) {
-            c.salience += 1.0; // Increase importance the more we see it
+        if (c.name == name || (c.name.length() > 4 && c.name.find(stem) == 0)) {
+            c.salience += 1.0; 
             return;
         }
     }
@@ -251,194 +257,92 @@ void Learner::discoverHiddenLinks() {
 }
 
 void Learner::queryConcept(std::string name) {
-    std::cout << "[AmI] Reasoning about: " << name << "..." << std::endl;
-    // Display Emotional Bias & User Interest
+    // 1. Normalize Query
+    std::string q = name;
+    if (!q.empty() && islower(q[0])) q[0] = toupper(q[0]); // Auto-capitalize for search
+    
+    std::cout << "[AmI] Reasoning about: " << q << "..." << std::endl;
+    
+    bool found = false;
+    const Concept* targetConcept = nullptr;
+    std::string canonicalName = q;
+
+    // Search Strategy: Exact -> Substring -> Stem
     for (const auto& c : activeConcepts) {
-        if (c.name == name) {
-            double interest = (userPreferences.count(name) ? userPreferences.at(name) : 0.0);
-            std::cout << "  - Emotional Resonance: " << (c.valence > 0.2 ? "POS " : (c.valence < -0.2 ? "NEG " : "NEU ")) 
-                      << "(Valence: " << c.valence << ", Salience: " << c.salience << ")" << std::endl;
-            if (interest > 0.1) {
-                std::cout << "  - User Interest Level: " << (interest > 0.7 ? "HIGH" : "MODERATE") << " (" << interest << ")" << std::endl;
-            }
+        if (c.name == q) {
+            targetConcept = &c;
+            found = true;
+            canonicalName = c.name;
             break;
         }
     }
-    bool found = false;
-    const Concept* targetConcept = nullptr;
     
-    for (const auto& c : activeConcepts) {
-        if (c.name == name) {
-            targetConcept = &c;
-            found = true;
-            break;
+    if (!found) {
+        for (const auto& c : activeConcepts) {
+            if (c.name.find(q) != std::string::npos || q.find(c.name) != std::string::npos) {
+                targetConcept = &c;
+                found = true;
+                canonicalName = c.name;
+                std::cout << "[AmI] Associated '" << q << "' with known concept '" << canonicalName << "'" << std::endl;
+                break;
+            }
         }
     }
 
     if (found) {
-        // ENHANCED GENERATIVE FLOW: Template-Based with Predicate Extraction
-        std::cout << "Definition: ";
-        
-        // Strategy 1: Extract clean predicates from evidence
+        std::cout << "Synthesis: ";
         bool templateGenerated = false;
-        if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
-            for (const auto& snippet : evidenceMap[name]) {
-                // Look for defining patterns
-                std::vector<std::string> definingVerbs = {" is ", " are ", " refers to ", " represents ", " means ", " defined as "};
-                
-                for (const auto& verb : definingVerbs) {
+
+        if (evidenceMap.count(canonicalName) && !evidenceMap[canonicalName].empty()) {
+            // Strategy 1: CLEAN DEFINITIONS (Priority: 'is' > 'are' > others)
+            std::vector<std::string> definingVerbs = {" is ", " refers to ", " represents ", " means ", " are "};
+            
+            for (const auto& verb : definingVerbs) {
+                for (const auto& snippet : evidenceMap[canonicalName]) {
                     size_t verbPos = snippet.find(verb);
                     if (verbPos != std::string::npos) {
-                        // Check if the concept name appears before the verb
-                        std::string beforeVerb = snippet.substr(0, verbPos);
-                        if (beforeVerb.find(name) != std::string::npos) {
-                            // Extract predicate (everything after the verb)
-                            std::string afterVerb = snippet.substr(verbPos + verb.length());
+                        std::string before = snippet.substr(0, verbPos);
+                        if (before.find(canonicalName) != std::string::npos) {
+                            std::string after = snippet.substr(verbPos + verb.length());
+                            size_t end = after.find_first_of(".;!");
+                            std::string predicate = (end != std::string::npos) ? after.substr(0, end) : after;
                             
-                            // Extract until first sentence boundary
-                            size_t endPos = afterVerb.find_first_of(".;!");
-                            std::string predicate = (endPos != std::string::npos) ? afterVerb.substr(0, endPos) : afterVerb;
+                            // Grammar fix: Singular Force
+                            std::string correctVerb = verb;
+                            if (verb == " are ") correctVerb = " is ";
                             
-                            // Clean and output
-                            size_t firstChar = predicate.find_first_not_of(" \"',;:—");
-                            if (firstChar != std::string::npos) {
-                                predicate = predicate.substr(firstChar);
-                                // Ensure it doesn't start with "the" if it's already in template
-                                std::cout << name << verb << predicate << ".";
-                                templateGenerated = true;
-                                break;
-                            }
+                            std::cout << canonicalName << correctVerb << predicate << "." << std::endl;
+                            templateGenerated = true;
+                            break;
                         }
                     }
                 }
                 if (templateGenerated) break;
             }
-            
-            // Strategy 2: Template-based synthesis if no clean predicate found
+
+            // Strategy 2: Best Informational Snippet
             if (!templateGenerated) {
-                // Find the most information-rich evidence snippet
-                std::string bestEvidence = evidenceMap[name][0];
-                for (const auto& ev : evidenceMap[name]) {
-                    if (ev.length() > bestEvidence.length() && ev.length() < 300) {
-                        bestEvidence = ev;
-                    }
-                }
+                std::string best = evidenceMap[canonicalName][0];
+                for (const auto& ev : evidenceMap[canonicalName]) if (ev.length() > best.length() && ev.length() < 250) best = ev;
                 
-                // Skip metadata prefix like [filename.txt]
-                size_t metaEnd = bestEvidence.find(']');
-                if (metaEnd != std::string::npos && metaEnd < 50) {
-                    bestEvidence = bestEvidence.substr(metaEnd + 1);
-                }
+                size_t meta = best.find(']');
+                if (meta != std::string::npos && meta < 50) best = best.substr(meta + 1);
                 
-                // Trim leading whitespace
-                size_t firstNonSpace = bestEvidence.find_first_not_of(" \t\r\n");
-                if (firstNonSpace != std::string::npos) {
-                    bestEvidence = bestEvidence.substr(firstNonSpace);
-                }
+                size_t dot = best.find('.');
+                std::string line = (dot != std::string::npos) ? best.substr(0, dot) : best;
                 
-                // Extract first sentence
-                size_t dot = bestEvidence.find('.');
-                std::string fragment = (dot != std::string::npos) ? bestEvidence.substr(0, dot) : bestEvidence;
-                
-                // Limit fragment length for readability
-                if (fragment.length() > 150) {
-                    fragment = fragment.substr(0, 147) + "...";
-                }
-                
-                // Template: use context
-                std::cout << name << " is described in the context of: \"" << fragment << "\".";
+                std::cout << canonicalName << " is characterized by: " << line << "." << std::endl;
                 templateGenerated = true;
             }
         }
         
-        // Strategy 3: Markov Chain Fallback for flow continuity
+        // Final fallback if still nothing
         if (!templateGenerated) {
-            std::cout << name;
-            std::string current = name;
-            std::set<std::string> usedWords;
-            int wordCount = 0;
-            
-            for (int i = 0; i < 15; ++i) {
-                usedWords.insert(current);
-                std::string bestNext = "";
-                double maxW = -1.0;
-                
-                std::string lookup = current;
-                if (!sequenceMap.count(lookup) && isupper(lookup[0])) {
-                    lookup[0] = tolower(lookup[0]);
-                }
-
-                if (sequenceMap.count(lookup) && !sequenceMap[lookup].empty()) {
-                    for (const auto& next : sequenceMap[lookup]) {
-                        if (next.second > maxW && !usedWords.count(next.first)) {
-                            maxW = next.second;
-                            bestNext = next.first;
-                        }
-                    }
-                }
-                
-                if (bestNext != "") {
-                    std::cout << " " << bestNext;
-                    current = bestNext;
-                    wordCount++;
-                    if (bestNext.back() == '.' || bestNext.back() == ';' || bestNext.back() == '!') break;
-                } else break;
-            }
-            
-            if (wordCount < 3) {
-                std::cout << " (insufficient linguistic data for generation)";
-            }
-            std::cout << ".";
+            std::cout << canonicalName << " is a concept currently present in my cognitive mapping with specialized evidence. (Linguistic model refining...)" << std::endl;
         }
         
-        std::cout << std::endl;
-
-        // 2. Structural Interaction (Multi-Hop Context)
-        if (relationshipMap.count(name)) {
-            std::cout << "  - Relational Context: " << name << " is fundamentally linked to ";
-            const auto& rels = relationshipMap.at(name);
-            for (size_t i = 0; i < std::min((size_t)5, rels.size()); ++i) {
-                std::cout << rels[i] << (i < std::min((size_t)5, rels.size()) - 1 ? ", " : "");
-            }
-            std::cout << "." << std::endl;
-            
-            // Secondary Hop: Explain WHY it's linked
-            if (!rels.empty()) {
-                std::string neighbor = rels[0];
-                if (evidenceMap.count(neighbor) && !evidenceMap[neighbor].empty()) {
-                    std::cout << "    (Cross-Referencing " << neighbor << ": " << evidenceMap[neighbor][0] << ")" << std::endl;
-                }
-            }
-        }
-
-        // 3. Computed Intelligence (Neural Algorithm Integration)
-        if (activeModel.target == name) {
-            std::cout << "  - Computational Model: Active Simulation running..." << std::endl;
-            double result = activeModel.predict(activeConcepts);
-            std::cout << "    > Estimated Current State of " << name << ": " << result << " (Confidence: " << activeModel.confidence << ")" << std::endl;
-        }
-
-        // 4. Advanced RAG Retrieval
-        if (evidenceMap.count(name) && !evidenceMap[name].empty()) {
-            std::cout << "\n[Retrieval] Source Evidence (Direct):" << std::endl;
-            for (const auto& cite : evidenceMap[name]) {
-                std::cout << "  &> \"" << cite << "\"" << std::endl;
-            }
-        } else {
-            // Global Fallback: Search all evidence for the string
-            std::cout << "\n[Retrieval] No direct evidence. Performing Global Trace..." << std::endl;
-            int foundCount = 0;
-            for (const auto& entry : evidenceMap) {
-                for (const auto& line : entry.second) {
-                    if (line.find(name) != std::string::npos || line.find(name.substr(0, name.length()-1)) != std::string::npos) {
-                        std::cout << "  ? (Inferred from " << entry.first << "): \"" << line << "\"" << std::endl;
-                        if (++foundCount > 2) break;
-                    }
-                }
-                if (foundCount > 2) break;
-            }
-        }
-        std::cout << "[AmI] My analysis of '" << name << "' suggests a complex web of associations. From my observations, it is frequently characterized by its relationship to the surrounding concepts." << std::endl;
+        std::cout << std::flush;
+        return;
     } else {
         // Multi-Concept Semantic Scan with Query Intent Analysis
         
@@ -625,7 +529,8 @@ void Learner::queryConcept(std::string name) {
             if (searchCount > 3) break;
         }
         if (searchCount == 0) {
-            std::cout << "[AmI] I have scrutinized my latent memory but found no trace of '" << name << "'. Perhaps you could explain its significance?" << std::endl;
+            std::cout << "[AmI] I have scrutinized my latent memory but found no trace of '" << name << "'. I'm querying my External Knowledge Core." << std::endl;
+            std::cout << "AMI_ACTION:RESEARCH:[" << name << "]" << std::endl;
         } else {
             std::cout << "[AmI] Based on my current synthesis, '" << name << "' appears in several contexts. It seems to be intellectually resonant with my core pillars." << std::endl;
         }
@@ -806,6 +711,30 @@ void Learner::formulateQuestions() {
                   << " times) in my established knowledge. Initiating investigation." << std::endl;
     }
 
+    // Strategy 5: SEMANTIC INTUITION (Internal Vector Connection)
+    if (semanticEngine.isReady()) {
+         for (const auto& c : activeConcepts) {
+             auto similar = semanticEngine.findSimilar(c.name, 3);
+             for (auto& sim : similar) {
+                 // Skip self-match
+                 if (sim.first == c.name) continue;
+                 
+                 // If very similar, assume relationship
+                 if (sim.second > 0.6) {
+                      bool alreadyLinked = false;
+                      if (relationshipMap.count(c.name)) {
+                          for(const auto& t : relationshipMap[c.name]) if(t == sim.first) alreadyLinked = true;
+                      }
+                      
+                      if (!alreadyLinked) {
+                          std::cout << "[Semantic Intuition] My vector memory suggests " << c.name << " is conceptually close to " << sim.first << " (Score: " << sim.second << ")" << std::endl;
+                          researchQuestions.push_back("What is the connection between " + c.name + " and " + sim.first + "?");
+                      }
+                 }
+             }
+         }
+    }
+
     if (!researchQuestions.empty()) {
         std::cout << "[Inquiry] Formulated " << researchQuestions.size() << " new research paths." << std::endl;
     }
@@ -945,6 +874,21 @@ void Learner::process() {
         }
 
         case LearningState::REVIEW:
+            // Sync Semantic Engine with latest knowledge
+            if (!evidenceMap.empty()) {
+                std::vector<std::pair<std::string, std::string>> corpus;
+                for(const auto& pair : evidenceMap) {
+                    // Combine all evidence snippets into one text for vectorization
+                    std::string combinedText = "";
+                    for(const auto& s : pair.second) combinedText += s + " ";
+                    corpus.push_back({pair.first, combinedText});
+                }
+                
+                // Only re-learn if we have substantially new data
+                // For V1, we learn every cycle for correctness
+                semanticEngine.learn(corpus);
+            }
+            
             pruneMemories();
             formulateQuestions();
             if (globalMood["curiosity"] > 0.1) {

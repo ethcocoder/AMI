@@ -1,0 +1,9 @@
+[Autonomous Research Result: Coordinate Systems K and K']
+In Einstein's relativity, coordinate systems are represented by the letters K and K'. 
+Frame K is the stationary system, or the reference frame at rest.
+Frame K' is the moving system, which moves at a constant velocity relative to K.
+The relationship between K and K' is governed by the Lorentz Transformation, not the classical Galilean transformation.
+The principle of relativity states that the laws of nature are the same whether referred to coordinate system K or to coordinate system K'.
+Measurements in K are (x, y, z, t) and in K' they are (x', y', z', t').
+This leads to phenomena like time dilation and length contraction as objects move between coordinate systems.
+The speed of light remains constant (c) in both system K and system K'.

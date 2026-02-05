@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include "semantic_engine.h"
 
 extern "C" {
     #include "../core_c/core.h"
@@ -119,6 +120,7 @@ private:
     std::map<std::string, double> globalMood; // "curiosity", "anxiety", "focus"
     std::string currentGoal;
     
+    SemanticEngine semanticEngine;
     Algorithm activeModel; 
     std::vector<std::string> researchQuestions;
     std::vector<std::string> cachedPillars;
